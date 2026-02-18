@@ -35,11 +35,8 @@ def run():
 
     X_0 = np.array([x_v, y_v, psi_v, r_v, b_v, u_v])
     X = X_0.copy()
-    
-    Xroute = [0, x_v+u_v*np.cos(psi_v)*config['sim_time']] # 原定轨迹
-    Yroute = [0, y_v+u_v*np.sin(psi_v)*config['sim_time']]
 
-    # obstacle data 换成多个障碍物的时候记得修改这里的循环
+    # obstacle data 多个障碍物
     X_ob, Y_ob, psi_ob ,u_ob = np.zeros(num_ob), np.zeros(num_ob), np.zeros(num_ob), np.zeros(num_ob)
     for i in range(num_ob):
         X_ob[i], Y_ob[i], psi_ob[i], u_ob[i] = start_state(vessel_data,1,config)
@@ -56,9 +53,10 @@ def run():
 
     # 障碍物状态数组（N步×障碍物数量）
     Xobs, Yobs, Vxobs, Vyobs = (np.zeros((N, num_ob)) for _ in range(4))
+    Psiobs, Uobs = (np.zeros((N, num_ob)) for _ in range(2))
     LOA_ob = [config['LOA_ob']] * num_ob
     BOL_ob = [config['BOL_ob']] * num_ob
-    CPA_ob = [LOA_ob * 2] * num_ob
+    CPA_ob = [loa * 2 for loa in LOA_ob]
     # CPA相关指标（DCPA/TCPA/相对速度/角度）
     DCPA, TCPA, Vrel, alpha, psi_Vrel = (np.zeros((N, num_ob)) for i in range(5))
     DCPA[:1], TCPA[:1] = 1000, 1000  # 初始值（避免除零）
@@ -72,8 +70,13 @@ def run():
 
     if Animation:
         fig, ax = plt.subplots()
-        plt.plot(Xroute, Yroute, 'ob', Xroute, Yroute, ':b', linewidth=1.0)
         plt.grid(True)
+        # 设置坐标轴范围，避免自动缩放导致视角混乱
+        ax.set_xlim(-2000, 2000)
+        ax.set_ylim(-2000, 2000)
+        ax.set_aspect('equal')
+        ax.set_xlabel('X (m)')
+        ax.set_ylabel('Y (m)')
         writer = animation.PillowWriter(fps=5)
 
     with writer.saving(fig, f"{config['output_dir']}/scenario_animation{config['case_number']}.gif", dpi=200):
@@ -89,16 +92,40 @@ def run():
             X_0 = X.copy()
 
             # Speed command
-            u_p[i] = 43.3
+            u_p[i] = 4.3
 
-            X=X*0.9
+            dx = u[i] * dt * np.cos(psi[i])
+            dy = u[i] * dt * np.sin(psi[i])
+            X[0] += dx  # x坐标更新
+            X[1] += dy  # y坐标更新
+            # 航向/角速度等暂时不变（无转向）
+            X[2] = psi[i]  # 航向保持不变
+            X[3] = r[i]    # 角速度保持不变
+            X[4] = b[i]    # 横漂速度保持不变
+            X[5] = u_p[i]  # 速度用指令速度
 
+            # 替换原有的障碍物状态更新循环
             for j in range(num_ob):
-                X_ob[j], Y_ob[j], psi_ob[j], u_ob[j] = start_state(vessel_data,2*i+1,config)
+                # 测试：固定障碍物位置（比如在(1000, 500)处，匀速直线运动）
+                if i == 0:
+                    X_ob[j] = 0  # 初始x坐标
+                    Y_ob[j] = 0   # 初始y坐标
+                    psi_ob[j] = np.pi/2  # 航向90度（y轴正方向）
+                    u_ob[j] = 2     # 速度2米/秒
+                else:
+                    # 障碍物匀速直线运动
+                    X_ob[j] += u_ob[j] * dt * np.cos(psi_ob[j])
+                    Y_ob[j] += u_ob[j] * dt * np.sin(psi_ob[j])
+                    X_ob[j] = np.clip(X_ob[j], -1900, 1900)
+                    Y_ob[j] = np.clip(Y_ob[j], -1900, 1900)
+
+                # 记录状态
                 Xobs[i, j] = X_ob[j]
                 Yobs[i, j] = Y_ob[j]
                 Vxobs[i, j] = u_ob[j] * np.cos(psi_ob[j])
                 Vyobs[i, j] = u_ob[j] * np.sin(psi_ob[j])
+                Psiobs[i, j] = psi_ob[j]
+                Uobs[i, j] = u_ob[j]
 
             for j in range(num_ob):
                 if i >= 1:
@@ -123,8 +150,7 @@ def run():
                 LOA_ob, BOL_ob, CPA_ob,       # 障碍物尺寸和CPA圈
                 Risk[i, :], u_ob, i, l                 # 风险值、速度、步数
             )
-            
-            if i % 101 == 0 and i != 0:
+            if i % 5 == 0 and i != 0:
                 writer.grab_frame()
 
             t += dt
@@ -134,6 +160,30 @@ def run():
         plt.savefig(f'{config["output_dir"]}/simulation_result{config["case_number"]}.eps', format='eps')
         plt.savefig(f'{config["output_dir"]}/simulation_result{config["case_number"]}.png')
         plt.show(block=True)
+
+    # 绘制航向变化图
+    plt.figure(figsize=(10, 6))
+    plt.plot(time, psi, label='Ship Heading')
+    plt.plot(time, Psiobs[:, 0], 'ro', label='Obstacle Heading')
+    plt.grid(True)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Heading (rad)')
+    plt.legend()
+    plt.title(f'Case {config["case_number"]} - Heading Over Time')
+    plt.savefig(f'{config["output_dir"]}/heading_over_time{config["case_number"]}.png')
+    plt.show(block=True)
+
+    # 绘制速度变化图
+    plt.figure(figsize=(10, 6))
+    plt.plot(time, u, label='Ship Speed')
+    plt.plot(time, Uobs[:, 0], 'ro', label='Obstacle Speed')
+    plt.grid(True)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Speed (m/s)')
+    plt.legend()
+    plt.title(f'Case {config["case_number"]} - Speed Over Time')
+    plt.savefig(f'{config["output_dir"]}/speed_over_time{config["case_number"]}.png')
+    plt.show(block=True)
        
 
 
