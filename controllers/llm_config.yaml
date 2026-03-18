@@ -1,0 +1,24 @@
+# 千问API配置
+qwen:
+  api_key: "sk-0560d24b8afd4ca78562a80f2c166446"  # 替换为你的真实API Key
+  model_name: "qwen-plus"                 # 可选：qwen-turbo/qwen-plus/qwen-max
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  temperature: 0.1                        # 低随机性，保证决策稳定
+  max_tokens: 1000                        # 返回文本最大长度
+
+# 系统提示词配置
+prompts:
+  negotiation_system: |
+    你是专业的船舶避碰决策专家，严格遵循国际海上避碰规则（COLREGs）。
+    仅输出JSON格式的优先级判定结果，不要添加任何额外解释。
+    优先级可选值：own_yield（本船避让）、obstacle_yield（障碍船避让）、simultaneous_adjust（双方调整）、no_action（无动作）。
+  action_system: |
+    你是船舶避碰动作决策专家，严格按照要求输出JSON格式的动作指令。
+    速度指令仅可选：faster（加速）、slower（减速）、keep（保持）；
+    航向指令仅可选：turn_left（左转）、turn_right（右转）、keep（保持）；
+    不要添加任何额外文本，仅输出JSON。
+
+# 冲突检测配置
+conflict:
+  risk_threshold: 0.5        # 冲突风险阈值
+  max_distance: 10000        # 最大检测距离（米）

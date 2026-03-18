@@ -22,15 +22,14 @@ def risk_calculations(dcpa, tcpa, distance_ob, v_rel):
     tcpa = np.asarray(tcpa)
     distance_ob = np.asarray(distance_ob)
     
-    a_dcpa = 443.0/1852
-    b_dcpa = 926/1852
+    a_dcpa = 443.0
+    b_dcpa = 926.0
 
-    a_tcpa = 180/1852
-    b_tcpa = 360/1852
+    a_tcpa = 180.0
+    b_tcpa = 360.0
 
-    a_dist = 148.16/1852
-    b_dist = 463.0/1852
-
+    a_dist = 148.16
+    b_dist = 463.0
  
     risk_dcpa = zmf(np.abs(dcpa), a_dcpa, b_dcpa)
     risk_tcpa = zmf(np.abs(tcpa), a_tcpa, b_tcpa)

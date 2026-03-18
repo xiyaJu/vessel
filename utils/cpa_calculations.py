@@ -1,6 +1,8 @@
 import numpy as np
 
-
+def wrap_to_pi(a):
+    return (a + np.pi) % (2*np.pi) - np.pi
+    
 def cpa_calculations(x, y, x_1, y_1, x_obs, y_obs, x_obs_1, y_obs_1, ts):
     """
     Calculate Closest Point of Approach (CPA) parameters using positions.

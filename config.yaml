@@ -1,18 +1,18 @@
 case_number: 1
-dt: 1
+dt: 20
 initial_time: 0
-sim_time: 1000
+sim_time: 800
 animation: True
 origin_lon: 122.28
 origin_lat: 29.87
 
-LOA_own: 15
-BOL_own: 10
+LOA_own: 90
+BOL_own: 60
 
 num_obstacles: 1
-LOA_ob: 15
-BOL_ob: 10
+LOA_ob: 90
+BOL_ob: 60
 
-
+gif_stride: 1
 vessel_data: data/path_data_1.csv
 output_dir: results/
